@@ -19,7 +19,6 @@ class RegisterView(APIView):
         password2 = request.data.get('password2')
         role      = request.data.get('role', 'buyer')
 
-        # basic validation
         if not username or not email or not password:
             return Response(
                 {"error": "All fields required"},
@@ -40,7 +39,6 @@ class RegisterView(APIView):
                 {"error": "Username already exists"},
                 status=status.HTTP_400_BAD_REQUEST)
 
-        # create user with hashed password
         user = User.objects.create_user(
             username = username,
             email    = email,
@@ -73,7 +71,6 @@ class LoginView(APIView):
                 {"error": "Email and password required"},
                 status=status.HTTP_400_BAD_REQUEST)
 
-        # find user by email
         try:
             user_obj = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
@@ -81,7 +78,6 @@ class LoginView(APIView):
                 {"error": "Invalid email or password"},
                 status=status.HTTP_401_UNAUTHORIZED)
 
-        # check password directly — no authenticate() needed
         if not user_obj.check_password(password):
             return Response(
                 {"error": "Invalid email or password"},
@@ -141,21 +137,26 @@ class BecomeSellerView(APIView):
                 {'message': 'Already a seller', 'role': 'seller'},
                 status=status.HTTP_200_OK)
 
+        # set role to seller
         user.role = 'seller'
         user.save()
 
-        try:
-            profile   = user.profile
-            shop_name = request.data.get('shop_name', '')
-            if shop_name:
-                profile.shop_name = shop_name
-                profile.save()
-            shop = profile.shop_name
-        except Exception:
-            shop = ''
+        # create SellerProfile if not exists — THIS IS THE KEY FIX
+        from apps.products.models import SellerProfile
+        shop_name = request.data.get('shop_name', user.username + "'s Shop")
+
+        seller_profile, created = SellerProfile.objects.get_or_create(
+            user=user,
+            defaults={'shop_name': shop_name}
+        )
+
+        # if already exists but shop_name was sent, update it
+        if not created and request.data.get('shop_name'):
+            seller_profile.shop_name = shop_name
+            seller_profile.save()
 
         return Response({
             'message'  : 'You are now a seller!',
             'role'     : user.role,
-            'shop_name': shop,
+            'shop_name': seller_profile.shop_name,
         }, status=status.HTTP_200_OK)
