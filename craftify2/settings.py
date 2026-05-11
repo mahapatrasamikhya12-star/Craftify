@@ -163,6 +163,6 @@ EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 'smcity2023@gmail.com'
 
-EMAIL_HOST_PASSWORD = 'nrzo aszi lwmi kogs'
+EMAIL_HOST_PASSWORD = 'nrzoaszilwmikogs'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
